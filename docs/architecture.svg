@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="680" viewBox="0 0 1200 680">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#f3f8ff"/>
+      <stop offset="100%" stop-color="#ecf5ee"/>
+    </linearGradient>
+    <style>
+      .box { fill:#ffffff; stroke:#1f2937; stroke-width:2; rx:14; ry:14; }
+      .title { font:700 20px 'Segoe UI', sans-serif; fill:#111827; }
+      .txt { font:500 15px 'Segoe UI', sans-serif; fill:#374151; }
+      .arrow { stroke:#2563eb; stroke-width:3; fill:none; marker-end:url(#m); }
+    </style>
+    <marker id="m" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#2563eb"/>
+    </marker>
+  </defs>
+
+  <rect x="0" y="0" width="1200" height="680" fill="url(#bg)"/>
+
+  <rect class="box" x="60" y="80" width="220" height="110"/>
+  <text class="title" x="85" y="125">Face ROI Input</text>
+  <text class="txt" x="85" y="150">Camera / Detect layer</text>
+
+  <rect class="box" x="340" y="60" width="280" height="160"/>
+  <text class="title" x="365" y="105">FeatureExtractor</text>
+  <text class="txt" x="365" y="132">Grayscale + Resize</text>
+  <text class="txt" x="365" y="156">LBP Histogram (256)</text>
+  <text class="txt" x="365" y="180">PCA Projection</text>
+
+  <rect class="box" x="700" y="60" width="320" height="160"/>
+  <text class="title" x="725" y="105">RecognitionEngine</text>
+  <text class="txt" x="725" y="132">Top-K centroid filtering</text>
+  <text class="txt" x="725" y="156">Two-frame fusion</text>
+  <text class="txt" x="725" y="180">Threshold decision</text>
+
+  <rect class="box" x="340" y="300" width="280" height="200"/>
+  <text class="title" x="365" y="345">FaceDatabase</text>
+  <text class="txt" x="365" y="372">face_db.bin (atomic write)</text>
+  <text class="txt" x="365" y="396">Templates + index table</text>
+  <text class="txt" x="365" y="420">Backup recovery (.bak)</text>
+
+  <rect class="box" x="700" y="300" width="320" height="200"/>
+  <text class="title" x="725" y="345">Storage Adapters</text>
+  <text class="txt" x="725" y="372">SPIFFS / SD / Fake</text>
+  <text class="txt" x="725" y="396">ReadAt / WriteAt / Rename</text>
+
+  <rect class="box" x="60" y="300" width="220" height="200"/>
+  <text class="title" x="85" y="345">Logger</text>
+  <text class="txt" x="85" y="372">Serial always on</text>
+  <text class="txt" x="85" y="396">SD logging after 2s</text>
+  <text class="txt" x="85" y="420">5MB rotation</text>
+
+  <path class="arrow" d="M280,135 L340,135"/>
+  <path class="arrow" d="M620,140 L700,140"/>
+  <path class="arrow" d="M840,220 L840,300"/>
+  <path class="arrow" d="M620,380 L700,380"/>
+  <path class="arrow" d="M280,390 L340,390"/>
+  <path class="arrow" d="M210,300 L210,190"/>
+
+  <text class="txt" x="1020" y="640">FaceRecognizeESP v1.0.0 architecture</text>
+</svg>

@@ -1,0 +1,55 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  host-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install host dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy scikit-learn
+      - name: Configure
+        run: cmake -S . -B build -DBUILD_TESTING=ON
+      - name: Build
+        run: cmake --build build -j
+      - name: Test
+        run: ctest --test-dir build --output-on-failure
+      - name: PCA sanity
+        run: python tools/test_pca.py --dim 16
+      - name: Upload PCA header
+        uses: actions/upload-artifact@v4
+        with:
+          name: pca_params
+          path: include/pca_params.h
+
+  arduino-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: arduino/setup-arduino-cli@v2
+      - name: Install ESP32 core
+        run: |
+          arduino-cli config init
+          arduino-cli core update-index
+          arduino-cli core install esp32:esp32
+      - name: Compile example
+        run: arduino-cli compile --fqbn esp32:esp32:esp32 examples/arduino/recognize_example
+
+  espidf-build:
+    runs-on: ubuntu-latest
+    container: espressif/idf:release-v5.1
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build ESP-IDF example
+        working-directory: examples/espidf
+        run: |
+          idf.py set-target esp32
+          idf.py build
