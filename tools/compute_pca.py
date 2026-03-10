@@ -30,7 +30,9 @@ def _iter_images(folder: pathlib.Path) -> Iterable[pathlib.Path]:
 
 def _load_image_gray(path: pathlib.Path, face_size: int) -> np.ndarray:
     if cv2 is not None:
-        img = cv2.imread(str(path), cv2.IMREAD_GRAYSCALE)
+        # Workaround for Windows paths with non-ASCII characters
+        img_array = np.fromfile(str(path), dtype=np.uint8)
+        img = cv2.imdecode(img_array, cv2.IMREAD_GRAYSCALE)
         if img is None:
             raise ValueError(f"Failed to read image: {path}")
         img = cv2.resize(img, (face_size, face_size), interpolation=cv2.INTER_LINEAR)
