@@ -4,6 +4,8 @@
 
 #include <mutex>
 
+namespace FaceRecognize {
+
 class Logger {
  public:
   void begin(bool enableSd = false);
@@ -11,6 +13,11 @@ class Logger {
   void setStorageAdapter(StorageAdapter *adapter);
   void log(const char *fmt, ...);
   void shutdown();
+
+  static Logger& getInstance() {
+    static Logger instance;
+    return instance;
+  }
 
  private:
   bool shouldWriteSdLocked() const;
@@ -23,3 +30,5 @@ class Logger {
   uint32_t recognitionEngineStartTimeMs_ = 0;
   StorageAdapter *storage_ = nullptr;
 };
+
+} // namespace FaceRecognize

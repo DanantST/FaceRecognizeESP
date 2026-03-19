@@ -13,6 +13,8 @@
 #include <mutex>
 #include <sstream>
 
+namespace FaceRecognize {
+
 namespace {
 constexpr float kBlurThreshold = 15.0f;
 }
@@ -45,8 +47,6 @@ FaceRecognizeESP::~FaceRecognizeESP() {
     impl_ = nullptr;
   }
 }
-
-
 
 bool FaceRecognizeESP::begin() {
   std::lock_guard<std::mutex> lock(impl_->mu);
@@ -104,9 +104,16 @@ void FaceRecognizeESP::enableSDStorage(bool enable) {
   impl_->useSdStorage = enable;
 }
 
+bool FaceRecognizeESP::registerUser(int id, const LibString &name, const std::vector<ImageFrame> &templates) {
+    // Note: registerUser implementation was missing in original file but present in updated header.
+    // I will implement a basic version that calls enrollUser or similar if possible.
+    // For now, I'll keep the enrollUser logic but adapt it.
+    return enrollUser((uint32_t)id, templates, name); // Assuming enrollUser takes name in some variant
+}
+
 bool FaceRecognizeESP::enrollUser(uint32_t userId,
                                   const std::vector<ImageFrame> &faceRois,
-                                  uint32_t &outTimestamp) {
+                                  const LibString &name) {
   std::lock_guard<std::mutex> lock(impl_->mu);
   if (!impl_->started || !impl_->extractor || !impl_->database) {
     return false;
@@ -119,16 +126,11 @@ bool FaceRecognizeESP::enrollUser(uint32_t userId,
   templates.reserve(faceRois.size());
 
   for (size_t i = 0; i < faceRois.size(); ++i) {
-    impl_->logger.log("Frame received");
-    impl_->logger.log("Running detection");
     if (!faceRois[i].valid()) {
-      impl_->logger.log("No face detected");
       return false;
     }
-    impl_->logger.log("Face detected");
-    impl_->logger.log("Image captured %d", static_cast<int>(i + 1));
 
-    std::vector<uint8_t> gray = fr::toGrayscale(faceRois[i]);
+    std::vector<uint8_t> gray = fr::convertToGrayscale(faceRois[i]);
     if (gray.empty()) {
       return false;
     }
@@ -167,30 +169,24 @@ bool FaceRecognizeESP::enrollUser(uint32_t userId,
     v *= invCount;
   }
 
-  return impl_->database->enrollUser(userId, templates, centroid, outTimestamp);
+  uint32_t ts = fr::millis();
+  return impl_->database->enrollUser(userId, templates, centroid, ts, std::string(name.c_str()));
 }
 
-RecognitionResult FaceRecognizeESP::recognizeTwoFrames(const ImageFrame &faceRoi1,
-                                                        const ImageFrame &faceRoi2) {
+RecognitionResult FaceRecognizeESP::recognize(const ImageFrame &frame) {
   std::lock_guard<std::mutex> lock(impl_->mu);
   if (!impl_->started || !impl_->engine) {
-    return {false, 0, 0.0f};
+    return {-1, 0.0f, ""};
   }
 
-  impl_->logger.log("Frame received");
-  impl_->logger.log("Running detection");
-  if (!faceRoi1.valid() || !faceRoi2.valid()) {
-    impl_->logger.log("No face detected");
-    return {false, 0, 0.0f};
+  if (!frame.valid()) {
+    return {-1, 0.0f, ""};
   }
-  impl_->logger.log("Face detected");
 
-  impl_->logger.log("Image captured 1");
-  impl_->logger.log("Image captured 2");
-  return impl_->engine->recognizeTwoFrames(faceRoi1, faceRoi2);
+  return impl_->engine->recognize(frame);
 }
 
-String FaceRecognizeESP::diagnostics() {
+LibString FaceRecognizeESP::diagnostics() {
   std::lock_guard<std::mutex> lock(impl_->mu);
   std::ostringstream oss;
   oss << "started=" << (impl_->started ? "true" : "false")
@@ -200,7 +196,7 @@ String FaceRecognizeESP::diagnostics() {
   if (impl_->database) {
     oss << ";" << impl_->database->diagnostics();
   }
-  return oss.str();
+  return LibString(oss.str().c_str());
 }
 
 int FaceRecognizeESP::getNumUsers() {
@@ -209,6 +205,21 @@ int FaceRecognizeESP::getNumUsers() {
     return 0;
   }
   return impl_->database->getNumUsers();
+}
+
+void FaceRecognizeESP::clearDatabase() {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    if (impl_->database) {
+        impl_->database->clear();
+    }
+}
+
+bool FaceRecognizeESP::removeUser(int id) {
+    std::lock_guard<std::mutex> lock(impl_->mu);
+    if (impl_->database) {
+        return impl_->database->removeUser((uint32_t)id);
+    }
+    return false;
 }
 
 void FaceRecognizeESP::shutdown() {
@@ -228,3 +239,6 @@ void FaceRecognizeESP::shutdown() {
   impl_->activeStorage = nullptr;
   impl_->started = false;
 }
+
+} // namespace FaceRecognize
+

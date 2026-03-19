@@ -6,110 +6,79 @@
 #include <algorithm>
 #include <cmath>
 
+namespace FaceRecognize {
+
 FeatureExtractor::FeatureExtractor(int faceSize, int featureDim)
     : faceSize_(faceSize), featureDim_(featureDim) {}
 
+bool FeatureExtractor::extract(const ImageFrame &frame, std::vector<float> &outFeature) const {
+  if (frame.pixels.empty()) return false;
+
+  // 1. Compute LBP Histogram
+  std::array<float, 256> hist;
+  computeLbpHistogram(frame.pixels.data(), frame.width, frame.height, hist);
+  
+  // 2. Project using PCA Matrix
+  outFeature = projectHistogram(hist, featureDim_);
+  
+  // 3. L2 Normalization (Unit Length)
+  l2Normalize(outFeature);
+  
+  return true;
+}
+
 void FeatureExtractor::computeLbpHistogram(const uint8_t *gray,
-                                           int width,
-                                           int height,
-                                           std::array<float, 256> &hist) {
+                                            int width,
+                                            int height,
+                                            std::array<float, 256> &hist) {
   hist.fill(0.0f);
-  if (gray == nullptr || width < 3 || height < 3) {
-    return;
-  }
-
+  
+  // Basic 3x3 LBP
   for (int y = 1; y < height - 1; ++y) {
-    const uint8_t *rowUp = gray + (y - 1) * width;
-    const uint8_t *row = gray + y * width;
-    const uint8_t *rowDown = gray + (y + 1) * width;
-
     for (int x = 1; x < width - 1; ++x) {
-      const uint8_t c = row[x];
+      uint8_t center = gray[y * width + x];
       uint8_t code = 0;
-      code |= static_cast<uint8_t>((rowUp[x - 1] >= c) << 7);
-      code |= static_cast<uint8_t>((rowUp[x] >= c) << 6);
-      code |= static_cast<uint8_t>((rowUp[x + 1] >= c) << 5);
-      code |= static_cast<uint8_t>((row[x + 1] >= c) << 4);
-      code |= static_cast<uint8_t>((rowDown[x + 1] >= c) << 3);
-      code |= static_cast<uint8_t>((rowDown[x] >= c) << 2);
-      code |= static_cast<uint8_t>((rowDown[x - 1] >= c) << 1);
-      code |= static_cast<uint8_t>((row[x - 1] >= c) << 0);
+      // Clockwise start from top-left
+      if (gray[(y - 1) * width + (x - 1)] >= center) code |= (1 << 7);
+      if (gray[(y - 1) * width + x]       >= center) code |= (1 << 6);
+      if (gray[(y - 1) * width + (x + 1)] >= center) code |= (1 << 5);
+      if (gray[y * width + (x + 1)]       >= center) code |= (1 << 4);
+      if (gray[(y + 1) * width + (x + 1)] >= center) code |= (1 << 3);
+      if (gray[(y + 1) * width + x]       >= center) code |= (1 << 2);
+      if (gray[(y + 1) * width + (x - 1)] >= center) code |= (1 << 1);
+      if (gray[y * width + (x - 1)]       >= center) code |= (1 << 0);
       hist[code] += 1.0f;
     }
+  }
+  
+  // L1 Normalization
+  float sum = 0;
+  for (float v : hist) sum += v;
+  if (sum > 0) {
+    for (float &v : hist) v /= sum;
   }
 }
 
 std::vector<float> FeatureExtractor::projectHistogram(const std::array<float, 256> &hist,
-                                                      int featureDim) {
-  const int dim = std::max(1, std::min(featureDim, FEATURE_DIM));
-
-  std::array<float, 256> centered{};
-  for (int i = 0; i < 256; ++i) {
-    centered[i] = hist[i] - LBP_MEAN[i];
-  }
-
-  std::vector<float> feature(static_cast<size_t>(dim), 0.0f);
-  for (int j = 0; j < dim; ++j) {
-    float acc = 0.0f;
-    for (int i = 0; i < 256; ++i) {
-      acc += centered[i] * PCA_MATRIX[j][i];
+                                                       int featureDim) {
+  std::vector<float> proj(featureDim, 0.0f);
+  for (int i = 0; i < featureDim; ++i) {
+    float sum = 0;
+    for (int j = 0; j < 256; ++j) {
+      sum += (hist[j] - LBP_MEAN[j]) * PCA_MATRIX[i][j];
     }
-    feature[static_cast<size_t>(j)] = acc;
+    proj[i] = sum;
   }
-
-  l2Normalize(feature);
-  return feature;
-}
-
-bool FeatureExtractor::extract(const ImageFrame &frame, std::vector<float> &outFeature) const {
-  if (!frame.valid()) {
-    return false;
-  }
-
-  const std::vector<uint8_t> gray = fr::toGrayscale(frame);
-  if (gray.empty()) {
-    return false;
-  }
-
-  std::vector<uint8_t> resized;
-  if (frame.width == faceSize_ && frame.height == faceSize_) {
-    resized = gray;
-  } else {
-    resized = fr::resizeBilinearGray(gray.data(), frame.width, frame.height, faceSize_, faceSize_);
-  }
-  if (resized.empty()) {
-    return false;
-  }
-
-  std::array<float, 256> hist{};
-  computeLbpHistogram(resized.data(), faceSize_, faceSize_, hist);
-
-  // L1 normalization as required.
-  float sum = 0.0f;
-  for (float v : hist) {
-    sum += v;
-  }
-  if (sum <= 0.0f) {
-    return false;
-  }
-  for (float &v : hist) {
-    v /= sum;
-  }
-
-  outFeature = projectHistogram(hist, featureDim_);
-  return !outFeature.empty();
+  return proj;
 }
 
 void FeatureExtractor::l2Normalize(std::vector<float> &v) {
-  float normSq = 0.0f;
-  for (float x : v) {
-    normSq += x * x;
-  }
-  if (normSq <= 1e-12f) {
-    return;
-  }
-  const float invNorm = 1.0f / std::sqrt(normSq);
-  for (float &x : v) {
-    x *= invNorm;
+  float sqSum = 0;
+  for (float val : v) sqSum += val * val;
+  float norm = std::sqrt(sqSum);
+  if (norm > 1e-6f) {
+    for (float &val : v) val /= norm;
   }
 }
+
+} // namespace FaceRecognize

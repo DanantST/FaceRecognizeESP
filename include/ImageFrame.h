@@ -4,6 +4,8 @@
 #include <vector>
 #include <utility>
 
+namespace FaceRecognize {
+
 // ImageFrame is intentionally simple and camera-pipeline agnostic.
 // The library expects face-cropped ROI frames.
 struct ImageFrame {
@@ -27,3 +29,5 @@ struct ImageFrame {
     return static_cast<int>(pixels.size()) >= expected;
   }
 };
+
+} // namespace FaceRecognize

@@ -1,11 +1,12 @@
 #include "ImageUtils.h"
+#include <esp_timer.h>
 
 #include <algorithm>
 #include <cmath>
 
 namespace fr {
 
-std::vector<uint8_t> toGrayscale(const ImageFrame &frame) {
+std::vector<uint8_t> convertToGrayscale(const FaceRecognize::ImageFrame &frame) {
   if (!frame.valid()) {
     return {};
   }

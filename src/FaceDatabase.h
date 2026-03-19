@@ -7,6 +7,8 @@
 #include <utility>
 #include <vector>
 
+namespace FaceRecognize {
+
 class FaceDatabase {
  public:
   FaceDatabase(StorageAdapter &storage,
@@ -16,13 +18,24 @@ class FaceDatabase {
                bool loadCentroidsToRam,
                const std::string &dbPath = "/face_db.bin");
 
+  struct SearchResult {
+    int userId = -1;
+    float similarity = 0.0f;
+    std::string name = "";
+  };
+
   bool begin();
   void shutdown();
 
   bool enrollUser(uint32_t userId,
                   const std::vector<std::vector<float>> &templates,
                   const std::vector<float> &centroid,
-                  uint32_t &outTimestamp);
+                  uint32_t &outTimestamp,
+                  const std::string &name = "");
+
+  SearchResult search(const std::vector<float> &feature, int topK) const;
+  void clear();
+  bool removeUser(uint32_t userId);
 
   int getNumUsers() const;
   std::vector<std::pair<uint32_t, std::vector<float>>> getCentroids() const;
@@ -32,6 +45,7 @@ class FaceDatabase {
  private:
   struct UserData {
     uint32_t userId = 0;
+    std::string name = "";
     uint32_t timestamp = 0;
     uint32_t firstTemplateOffset = 0;
     std::vector<std::vector<float>> templates;
@@ -55,3 +69,5 @@ class FaceDatabase {
   std::vector<UserData> users_;
   bool started_ = false;
 };
+
+} // namespace FaceRecognize

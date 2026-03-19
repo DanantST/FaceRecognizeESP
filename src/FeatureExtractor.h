@@ -5,6 +5,8 @@
 #include <array>
 #include <vector>
 
+namespace FaceRecognize {
+
 class FeatureExtractor {
  public:
   FeatureExtractor(int faceSize, int featureDim);
@@ -24,3 +26,5 @@ class FeatureExtractor {
   int faceSize_;
   int featureDim_;
 };
+
+} // namespace FaceRecognize

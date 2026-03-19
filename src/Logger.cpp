@@ -7,8 +7,12 @@
 #include <string>
 
 #if defined(ARDUINO)
+#if defined(USE_ARDUINO) || defined(ARDUINO)
 #include <Arduino.h>
 #endif
+#endif
+
+namespace FaceRecognize {
 
 namespace {
 constexpr const char *kLogPath = "/logs/faceengine.log";
@@ -147,3 +151,5 @@ void Logger::shutdown() {
   enableSd_ = false;
   storage_ = nullptr;
 }
+
+} // namespace FaceRecognize

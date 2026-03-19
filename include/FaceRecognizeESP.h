@@ -5,51 +5,60 @@
 
 #include "ImageFrame.h"
 
-#if !defined(ARDUINO)
+#if defined(ARDUINO)
+#include <Arduino.h>
+#else
 #include <string>
-using String = std::string;
+#endif
+
+namespace FaceRecognize {
+
+#if defined(ARDUINO)
+typedef String LibString;
+#else
+typedef std::string LibString;
 #endif
 
 struct RecognitionResult {
-  bool matched;
-  uint32_t userId;     // valid if matched==true
-  float confidence;    // [0.0 .. 1.0]
+  int id;
+  float similarity;
+  LibString name;
 };
 
 class FaceRecognizeESP {
  public:
   struct Config {
-    int featureDim = 100;           // default PCA output dims
-    int faceSize = 96;              // ROI normalized size
-    int maxUsers = 500;
-    int templatesPerUser = 5;       // fixed
-    int topK = 5;                   // centroid filter candidate count
-    float matchThreshold = 0.75f;   // normalized similarity threshold (cosine)
-    bool loadCentroidsToRam = true;
+    Config() : featureDim(100), faceSize(96), maxUsers(500), templatesPerUser(5),
+               topK(5), matchThreshold(0.75f), loadCentroidsToRam(true) {}
+    int featureDim;
+    int faceSize;
+    int maxUsers;
+    int templatesPerUser;
+    int topK;
+    float matchThreshold;
+    bool loadCentroidsToRam;
   };
 
-  FaceRecognizeESP(const Config &cfg = Config());
+  FaceRecognizeESP(const Config &cfg = Config{});
+  virtual ~FaceRecognizeESP();
 
   // Initialize; must be called before other APIs. Returns false if fatal error.
   bool begin();
 
-  // Toggle SD storage (one-liner). If true and SD present, DB stored on SD. If false -> SPIFFS.
   void enableSDStorage(bool enable);
+  bool enrollUser(uint32_t userId, const std::vector<ImageFrame> &faceRois, const LibString &name = LibString(""));
+  bool registerUser(int id, const LibString &name, const std::vector<ImageFrame> &templates);
+  RecognitionResult recognize(const ImageFrame &frame);
 
-  // Enroll a user with exactly config.templatesPerUser images (poses).
-  // Returns true on success.
-  bool enrollUser(uint32_t userId, const std::vector<ImageFrame> &faceRois, uint32_t &outTimestamp);
-
-  // Recognize using two face ROIs captured 1 second apart.
-  // Non-blocking variant: scheduleRecognition() spawns background task. But the simple blocking API:
-  RecognitionResult recognizeTwoFrames(const ImageFrame &faceRoi1, const ImageFrame &faceRoi2);
-
-  // Diagnostics and DB stats
-  String diagnostics();
+  LibString diagnostics();
   int getNumUsers();
+  void clearDatabase();
+  bool removeUser(int id);
   void shutdown();
 
  private:
   struct Impl;
   Impl *impl_;
 };
+
+} // namespace FaceRecognize

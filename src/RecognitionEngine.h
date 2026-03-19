@@ -11,11 +11,14 @@
 #include <queue>
 #include <thread>
 
+namespace FaceRecognize {
+
 class RecognitionEngine {
  public:
   struct Config {
-    int topK = 5;
-    float matchThreshold = 0.75f;
+    Config() : topK(5), matchThreshold(0.75f) {}
+    int topK;
+    float matchThreshold;
   };
 
   RecognitionEngine(FeatureExtractor &extractor,
@@ -25,6 +28,7 @@ class RecognitionEngine {
 
   bool begin();
   void shutdown();
+  FaceRecognize::RecognitionResult recognize(const FaceRecognize::ImageFrame &frame);
   RecognitionResult recognizeTwoFrames(const ImageFrame &faceRoi1, const ImageFrame &faceRoi2);
   void setMatchThreshold(float threshold);
 
@@ -50,3 +54,5 @@ class RecognitionEngine {
   std::thread worker_;
   bool running_ = false;
 };
+
+} // namespace FaceRecognize

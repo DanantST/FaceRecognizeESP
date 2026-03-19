@@ -8,6 +8,8 @@
 #include <unordered_map>
 #include <vector>
 
+namespace FaceRecognize {
+
 class StorageAdapter {
  public:
   virtual ~StorageAdapter() {}
@@ -71,3 +73,5 @@ class FakeStorageAdapter : public StorageAdapter {
   std::unordered_map<std::string, std::vector<uint8_t>> files_;
   bool initialized_ = false;
 };
+
+} // namespace FaceRecognize
